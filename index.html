@@ -7,17 +7,19 @@
         <script type="importmap">
             {
                 "imports": {
-                    "vue": "https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.esm-browser.js",
-                    "@graffiti-garden/implementation-local": "https://cdn.jsdelivr.net/npm/@graffiti-garden/implementation-local@0.6.4/dist/browser/index.js",
-                    "@graffiti-garden/implementation-remote": "https://cdn.jsdelivr.net/npm/@graffiti-garden/implementation-remote@0.6.2/dist/browser/index.js",
-                    "@graffiti-garden/wrapper-vue": "https://cdn.jsdelivr.net/npm/@graffiti-garden/wrapper-vue@0.7.2/dist/browser/plugin.mjs"
+                    "vue": "https://cdn.jsdelivr.net/npm/vue@3.5.32/dist/vue.esm-browser.js",
+                    "@graffiti-garden/implementation-local": "https://cdn.jsdelivr.net/npm/@graffiti-garden/implementation-local@1.2.0/dist/browser/index.js",
+                    "@graffiti-garden/implementation-decentralized": "https://cdn.jsdelivr.net/npm/@graffiti-garden/implementation-decentralized@0.0.9/dist/browser/index.js",
+                    "@graffiti-garden/wrapper-vue": "https://cdn.jsdelivr.net/npm/@graffiti-garden/wrapper-vue@1.2.2/dist/browser/plugin.mjs"
                 }
             }
         </script>
+        <script src="index.js" type="module"></script>
         <link rel="stylesheet" href="style.css" />
     </head>
     <body>
-        <div id="app">
+        <div id="app">Loading...</div>
+        <template id="template">
             <h1>DesignFTW Chatroom</h1>
             <button v-if="!$graffitiSession.value" @click="$graffiti.login()">
                 Log In
@@ -26,58 +28,41 @@
                 <button @click="$graffiti.logout($graffitiSession.value)">
                     Log Out
                 </button>
-                <form @submit.prevent="sendMessage($graffitiSession.value)">
-                    <fieldset :disabled="sending">
-                        <input
-                            type="text"
-                            v-model="myMessage"
-                            placeholder="Message"
-                            ref="messageInput"
-                            v-focus
-                        />
-                        <input
-                            type="submit"
-                            :value="sending? 'Sending...' : 'Send'"
-                        />
-                    </fieldset>
+                <form @submit.prevent="sendMessage()">
+                    <input
+                        type="text"
+                        v-model="myMessage"
+                        placeholder="Message"
+                    />
+                    <input
+                        type="submit"
+                        :value="isSending ? 'Sending...' : 'Send'"
+                        :disabled="!myMessage || isSending"
+                    />
                 </form>
             </template>
 
             <h2>Messages</h2>
 
-            <graffiti-discover
-                v-slot="{ objects: messageObjects, isInitialPolling }"
-                :channels="channels"
-                :schema="{
-                    properties: {
-                        value: {
-                            required: ['content', 'published'],
-                            properties: {
-                                content: { type: 'string' },
-                                published: { type: 'number' }
-                            }
-                        }
-                    }
-                }"
-            >
-                <ul>
-                    <li v-if="isInitialPolling">Loading...</li>
-                    <li
-                        v-for="object of messageObjects.sort((a, b) => b.value.published - a.value.published)"
-                        :key="object.url"
+            <p v-if="areMessageObjectsLoading">
+                <em>Loading messages...</em>
+            </p>
+            <ul v-else>
+                <li v-for="object of sortedMessageObjects" :key="object.url">
+                    <strong>
+                        <graffiti-actor-to-handle :actor="object.actor">
+                        </graffiti-actor-to-handle> </strong
+                    >: {{ object.value.content }}
+                    <button
+                        v-if="object.actor===$graffitiSession.value?.actor"
+                        @click="deleteMessage(object)"
+                        :disabled="isDeleting.has(object.url)"
                     >
-                        <strong>
-                            {{ object.actor }}<span
-                                v-if="object.actor===$graffitiSession.value.actor"
-                            >
-                                (you)</span
-                            ></strong
-                        >: {{ object.value.content }}
-                    </li>
-                </ul>
-            </graffiti-discover>
-        </div>
-
-        <script src="index.js" type="module"></script>
+                        {{ isDeleting.has(object.url) ? "Deleting..." : "Delete"
+                        }}
+                    </button>
+                </li>
+            </ul>
+        </template>
     </body>
 </html>

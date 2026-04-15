@@ -1,45 +1,82 @@
-import { createApp } from "vue";
+import { createApp, ref, computed } from "vue";
 import { GraffitiLocal } from "@graffiti-garden/implementation-local";
-import { GraffitiRemote } from "@graffiti-garden/implementation-remote";
-import { GraffitiPlugin } from "@graffiti-garden/wrapper-vue";
+import { GraffitiDecentralized } from "@graffiti-garden/implementation-decentralized";
+import {
+  GraffitiPlugin,
+  useGraffiti,
+  useGraffitiSession,
+  useGraffitiDiscover,
+} from "@graffiti-garden/wrapper-vue";
 
-createApp({
-  data() {
-    return {
-      myMessage: "",
-      sending: false,
-      channels: ["designftw"],
-    };
-  },
+function setup() {
+  // Initialize Graffiti
+  const graffiti = useGraffiti();
+  const session = useGraffitiSession();
 
-  methods: {
-    async sendMessage(session) {
-      if (!this.myMessage) return;
+  // This is the "directory" our messages will go in
+  const channel = "designftw-26";
 
-      this.sending = true;
+  // Declare a signal for the message entered in the chat
+  const myMessage = ref("");
 
-      await this.$graffiti.put(
-        {
-          value: {
-            content: this.myMessage,
-            published: Date.now(),
-          },
-          channels: this.channels,
+  // Declare a signal representing the messages in the chat
+  const { objects: messageObjects, isFirstPoll: areMessageObjectsLoading } =
+    useGraffitiDiscover([channel], {
+      value: {
+        required: ["content", "published"],
+        properties: {
+          content: { type: "string" },
+          published: { type: "number" },
         },
-        session,
-      );
+      },
+    });
+  const sortedMessageObjects = computed(() => {
+    return messageObjects.value.toSorted((a, b) => {
+      return b.value.published - a.value.published;
+    });
+  });
 
-      this.sending = false;
-      this.myMessage = "";
+  const isSending = ref(false);
+  async function sendMessage() {
+    isSending.value = true;
+    await graffiti.post(
+      {
+        value: {
+          content: myMessage.value,
+          published: Date.now(),
+        },
+        channels: [channel],
+      },
+      session.value,
+    );
+    myMessage.value = "";
+    isSending.value = false;
+  }
 
-      // Refocus the input field after sending the message
-      await this.$nextTick();
-      this.$refs.messageInput.focus();
-    },
-  },
-})
+  const isDeleting = ref(new Set());
+  async function deleteMessage(message) {
+    isDeleting.value.add(message.url);
+    await graffiti.delete(message, session.value);
+    isDeleting.value.delete(message.url);
+  }
+
+  return {
+    myMessage,
+    messageObjects,
+    areMessageObjectsLoading,
+    sortedMessageObjects,
+    isSending,
+    sendMessage,
+    isDeleting,
+    deleteMessage,
+  };
+}
+
+const App = { template: "#template", setup };
+
+createApp(App)
   .use(GraffitiPlugin, {
-    graffiti: new GraffitiLocal(),
-    // graffiti: new GraffitiRemote(),
+    // graffiti: new GraffitiLocal(),
+    graffiti: new GraffitiDecentralized(),
   })
   .mount("#app");
