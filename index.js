@@ -14,7 +14,39 @@ function setup() {
   const session = useGraffitiSession();
 
   // This is the "directory" our messages will go in
-  const channel = "designftw-26";
+  const channel = ref("designftw-26-test");
+
+  async function newChat() {
+    const title = prompt("Enter a title for your chat:", "My new chat");
+    await graffiti.post(
+      {
+        value: {
+          activity: "Create",
+          type: "Chat",
+          channel: crypto.randomUUID(),
+          title,
+          published: Date.now(),
+        },
+        channels: ["designftw-26"],
+      },
+      session.value,
+    );
+  }
+
+  const { objects: chats } = useGraffitiDiscover(["designftw-26"], {
+    properties: {
+      value: {
+        required: ["activity", "type", "channel", "title", "published"],
+        properties: {
+          activity: { const: "Create" },
+          type: { const: "Chat" },
+          channel: { type: "string" },
+          title: { type: "string" },
+          published: { type: "number" },
+        },
+      },
+    },
+  });
 
   // Declare a signal for the message entered in the chat
   const myMessage = ref("");
@@ -22,7 +54,7 @@ function setup() {
   // "Discover" messages in the chat
   const { objects: messageObjects, isFirstPoll: areMessageObjectsLoading } =
     useGraffitiDiscover(
-      [channel],
+      () => [channel.value],
       {
         properties: {
           value: {
@@ -59,7 +91,7 @@ function setup() {
             content: myMessage.value,
             published: Date.now(),
           },
-          channels: [channel],
+          channels: [channel.value],
         },
         session.value,
       );
@@ -84,6 +116,9 @@ function setup() {
   }
 
   return {
+    newChat,
+    chats,
+    channel,
     myMessage,
     messageObjects,
     areMessageObjectsLoading,

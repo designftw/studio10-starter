@@ -42,6 +42,29 @@
                 </form>
             </template>
 
+            <h2>Chats</h2>
+
+            <button @click="newChat">New Chat</button>
+
+            <ul>
+                <li v-for="chat in chats" :key="chat.url">
+                    {{ chat.value.title }}
+                    <button
+                        @click="channel=chat.value.channel"
+                        :disabled="channel===chat.value.channel"
+                    >
+                        {{ channel===chat.value.channel ? "Selected" : "Select"
+                        }}
+                    </button>
+                    <button
+                        v-if="chat.actor===$graffitiSession.value?.actor"
+                        @click="$graffiti.delete(chat, $graffitiSession.value)"
+                    >
+                        Delete
+                    </button>
+                </li>
+            </ul>
+
             <h2>Messages</h2>
 
             <p v-if="areMessageObjectsLoading">
