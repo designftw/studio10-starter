@@ -24,11 +24,13 @@ function setup() {
     useGraffitiDiscover(
       [channel],
       {
-        value: {
-          required: ["content", "published"],
-          properties: {
-            content: { type: "string" },
-            published: { type: "number" },
+        properties: {
+          value: {
+            required: ["content", "published"],
+            properties: {
+              content: { type: "string" },
+              published: { type: "number" },
+            },
           },
         },
       },
